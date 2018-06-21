@@ -7,17 +7,16 @@ http://alembic.zzzcomputing.com/en/latest/api/commands.html
 http://alembic.zzzcomputing.com/en/latest/api/config.html#alembic.config.Config
 """
 
-
 from __future__ import absolute_import
 
 import os
 import os.path as osph
 import sys
 
+from .utils import (OrmBase, db_read, db_write, dynamic_table)
+
 os.environ["LIB_DOC"] = "0"
 sys.path.insert(0, osph.join(osph.abspath(osph.dirname(__file__)), osph.pardir))
-sys.path.insert(0, osph.join(osph.abspath(osph.dirname(__file__)), "src"))
-sys.path.insert(0, osph.join(osph.abspath(osph.dirname(__file__)), osph.pardir, "WEB"))
 
 _migration_path = osph.join(osph.curdir, ".alembic")
 _base_path = osph.abspath(osph.dirname(__file__))
@@ -27,7 +26,7 @@ _origin_line = """# from myapp import mymodel
 target_metadata = None"""
 
 _new_line = """
-from cells.db.dbutils import OrmBase
+from myorm import OrmBase
 target_metadata = OrmBase.metadata
 
 import glob

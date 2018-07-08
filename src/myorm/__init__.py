@@ -9,13 +9,11 @@ http://alembic.zzzcomputing.com/en/latest/api/config.html#alembic.config.Config
 
 from __future__ import absolute_import
 
-import os
 import os.path as osph
 import sys
 
 from .utils import (OrmBase, db_read, db_write, dynamic_table)
 
-os.environ["LIB_DOC"] = "0"
 sys.path.insert(0, osph.join(osph.abspath(osph.dirname(__file__)), osph.pardir))
 
 _migration_path = osph.join(osph.curdir, ".alembic")
@@ -32,16 +30,34 @@ target_metadata = OrmBase.metadata
 import glob
 from importlib.machinery import SourceFileLoader
 from os.path import (join, realpath)
+
 mods_map = {}
-mods = glob.glob(join(realpath("."), "*", "models.py")) + glob.glob(join(realpath("."), "*", "model.py"))
+
+search_rules = [
+    join(realpath("."), "*", "model.py"),
+    join(realpath("."), "*", "models.py"),
+]
+print("当前搜索规则是: {}\n".format(search_rules))
+mods = [glob.glob(ph) for ph in search_rules]
 
 for idx, mod_ph in enumerate(mods):
-    mod = SourceFileLoader("dynamic_imp_mod.{}".format(idx), mod_ph).load_module()
+    msg = mod_ph
+    try:
+        mod = SourceFileLoader("dynamic_imp_mod.{}".format(idx), mod_ph).load_module()
+    
+        for o in dir(mod):
+            _obj = type(getattr(mod, o))
+            if issubclass(_obj, OrmBase) and hasattr(_obj, "__tablename__"):
+                mods_map[idx] = _obj
 
-    for o in dir(mod):
-        _obj = type(getattr(mod, o))
-        if issubclass(_obj, OrmBase) and hasattr(_obj, "__tablename__"):
-            mods_map[idx] = _obj
+        msg = "成功加载模型: {}\n".format(mod_ph)
+
+    except (Exception,) as e:
+        msg = "加载模型时，出现错误。\n模型路径: {}\n" \
+              "错误信息: {}\n".format(mod_ph, e)
+    finally:
+        print(msg)
+        del msg
 """
 
 

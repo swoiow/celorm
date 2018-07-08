@@ -9,7 +9,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 
 setup(
     name="myorm",
-    version="0.0.4",
+    version="0.0.5",
 
     license='MIT',
 

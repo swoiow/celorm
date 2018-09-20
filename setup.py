@@ -1,34 +1,46 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*
 
-import os
+import setuptools
 
-from setuptools import find_packages, setup
 
-here = os.path.abspath(os.path.dirname(__file__))
+NAME = "celorm"
+VERSION = "0.0.6"
+URL = "https://github.com/swoiow/celorm"
 
-setup(
-    name="myorm",
-    version="0.0.5",
+EXTRAS_CLI = [
+    "fire",
+]
 
-    license='MIT',
+EXTRAS_FULL = EXTRAS_CLI + [
+    "alembic",
+]
 
-    package_dir={"": "src"},
-    packages=find_packages(
-        where="src",
-        exclude=["contrib", "docs", "tests*", "tasks", "app"],
-    ),
+DEPENDENCIES = [
+    "sqlalchemy",
+]
+
+setuptools.setup(
+    name=NAME,
+    version=VERSION,
+
+    url=URL,
+    license="MPL-2.0",
+
+    packages=[NAME],
+    package_dir={
+        NAME: "src/orm",
+    },
 
     entry_points={
-        "console_scripts": [
-            "myorm=myorm:main",
-        ],
+        "console_scripts": ["celorm=celorm.cli:main"],
     },
 
     zip_safe=False,
-    install_requires=[
-        "fire",
-        "alembic",
-    ],
-    python_requires='>=3.3',
+    extras_require={
+        "cli": EXTRAS_CLI,
+        "full": EXTRAS_FULL,
+    },
+    install_requires=DEPENDENCIES,
+    python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*",
 )

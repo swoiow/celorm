@@ -10,9 +10,13 @@ http://alembic.zzzcomputing.com/en/latest/api/config.html#alembic.config.Config
 from __future__ import absolute_import
 
 import os.path as osph
+import pdb
+import pickle
 import sys
+import time
 
-from .utils import (OrmBase, db_read, db_write, dynamic_table)
+
+cPickle = pickle
 
 sys.path.insert(0, osph.join(osph.abspath(osph.dirname(__file__)), osph.pardir))
 
@@ -24,7 +28,9 @@ _origin_line = """# from myapp import mymodel
 target_metadata = None"""
 
 _new_line = """
-from myorm import OrmBase
+# [start] celorm patch
+
+from orm import OrmBase
 target_metadata = OrmBase.metadata
 
 import glob
@@ -44,7 +50,7 @@ for idx, mod_ph in enumerate(mods):
     msg = mod_ph
     try:
         mod = SourceFileLoader("dynamic_imp_mod.{}".format(idx), mod_ph).load_module()
-    
+
         for o in dir(mod):
             _obj = type(getattr(mod, o))
             if issubclass(_obj, OrmBase) and hasattr(_obj, "__tablename__"):
@@ -58,13 +64,11 @@ for idx, mod_ph in enumerate(mods):
     finally:
         print(msg)
         del msg
+# [end] celorm patch
 """
 
 
-class Help(object):
-    """ 帮助函数
-    """
-
+class CLI(object):
     @staticmethod
     def init_db():
         if osph.exists(_migration_path):
@@ -82,12 +86,11 @@ class Help(object):
             # 修改 env.py 文件
             patch_env()
 
-            print("请修改 alembic.ini 中 sqlalchemy.url 的值")
+            print("请修改 alembic.ini 中 sqlalchemy.url 的值. ")
 
     @staticmethod
     def makemigrations():
         if osph.exists(_migration_path):
-            import time
             from alembic import command
             from alembic.config import Config
 
@@ -116,9 +119,9 @@ class Help(object):
         else:
             return _migration_path + " not existed!"
 
-    # def auto_migrate():
-    #     Help.makemigrations()
-    #     Help.migrate()
+    # def auto_migrate(self):
+    #     self.makemigrations()
+    #     self.migrate()
 
     def __repr__(self):
         return "<{} @{}>".format(self.__class__.__name__, hex(id(self.__class__)))
@@ -126,6 +129,7 @@ class Help(object):
 
 def patch_env():
     from alembic.config import Config
+
     alembic_cfg = Config("alembic.ini")
 
     env_path = alembic_cfg.get_main_option("script_location")
@@ -138,7 +142,27 @@ def patch_env():
         wf.write(_new_f)
 
 
-def main():
-    import fire
+def dump_check(file):
+    if osph.isfile(file):
+        with open(file, "rb") as rf:
+            ctx = cPickle.load(rf)
 
-    fire.Fire(Help)
+        print("activate python pdb. please check the object(ctx)")
+        pdb.set_trace()
+
+
+def main():
+    try:
+        import fire
+
+        inst = CLI()
+        inst.dmp_chk = dump_check
+
+        fire.Fire(inst)
+
+    except ImportError:
+        print(
+            "running cli mode failed. "
+            "missing fire. please install package with extra-cli or extra-full. "
+            "to get more, check in github https://github.com/swoiow/celorm "
+        )

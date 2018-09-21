@@ -161,8 +161,10 @@ def main():
         fire.Fire(inst)
 
     except ImportError:
-        print(
-            "running cli mode failed. "
-            "missing fire. please install package with extra-cli or extra-full. "
-            "to get more, check in github https://github.com/swoiow/celorm "
-        )
+        import sys
+
+        message = "running cli mode failed. \n" \
+                  "missing fire. please install package with extra-cli or extra-full. \n" \
+                  "to get more, check in github https://github.com/swoiow/celorm \n"
+
+        sys.stderr.write('\x1b[1;31m' + message.strip() + '\x1b[0m' + '\n')

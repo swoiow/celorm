@@ -12,6 +12,28 @@ def generate_sql_exec(table_name, item):
     return sql_exec
 
 
+def generate_table_class(tbl: sa.Table):
+    def _repr_(self):
+        return "<%s @%#x>" % (self.__tablename__.upper(), id(self))
+
+    from .utils import OrmBase
+
+    tbl_name = tbl.fullname
+    objects = {
+        "__table__": tbl,
+        "__tablename__": tbl_name,
+        "__repr__": _repr_,
+    }
+
+    tbl_class = type(
+        "{class_name}".format(class_name=tbl_name.upper()),
+        (OrmBase,),
+        objects
+    )
+
+    return tbl_class
+
+
 def get_table_model(conn: sa.engine.Engine, table: str, db_name=None):
     meta = sa.MetaData()
     meta.reflect(bind=conn, schema=db_name)

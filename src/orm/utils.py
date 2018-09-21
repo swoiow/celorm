@@ -97,7 +97,7 @@ class MyORMBase(object):
                 setattr(self, obj, kwargs[obj])
 
     def __repr__(self):
-        return '<%s @%#x>' % (self.__class__.__name__, id(self))
+        return "<%s @%#x>" % (self.__class__.__name__, id(self))
 
 
 OrmBase = declarative_base(cls=MyORMBase)
@@ -133,10 +133,10 @@ def dynamic_table(cls_name, model, table_name=None):
         print(q.all())
     """
 
-    dict_ = table_name and {'__tablename__': table_name} or dict()
+    dict_ = table_name and {"__tablename__": table_name} or dict()
 
     table_object = type(
-        'DYT_{class_name}'.format(class_name=cls_name),
+        "DYT_{class_name}".format(class_name=cls_name),
         (model, OrmBase),
         dict_
     )

@@ -27,43 +27,52 @@ _origin_line = """# from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 target_metadata = None"""
 
-_new_line = """
+_new_line = r"""
 # [start] celorm patch
 
-from orm import OrmBase
+from celorm.utils import OrmBase
+
 target_metadata = OrmBase.metadata
-
-import glob
-from importlib.machinery import SourceFileLoader
-from os.path import (join, realpath)
-
 mods_map = {}
 
-search_rules = [
-    join(realpath("."), "*", "model.py"),
-    join(realpath("."), "*", "models.py"),
-]
-print("当前搜索规则是: {}\n".format(search_rules))
-mods = [glob.glob(ph) for ph in search_rules]
 
-for idx, mod_ph in enumerate(mods):
-    msg = mod_ph
-    try:
-        mod = SourceFileLoader("dynamic_imp_mod.{}".format(idx), mod_ph).load_module()
+def search_model():
+    import glob
+    from itertools import chain
+    from importlib.machinery import SourceFileLoader
+    from os.path import (join, realpath)
 
-        for o in dir(mod):
-            _obj = type(getattr(mod, o))
-            if issubclass(_obj, OrmBase) and hasattr(_obj, "__tablename__"):
-                mods_map[idx] = _obj
+    search_rules = [
+        join(realpath("."), "*", "model.py"),
+        join(realpath("."), "*", "models.py"),
+    ]
+    print("当前搜索规则是: {}\n".format(search_rules))
+    mods = [glob.glob(ph) for ph in search_rules]
+    mods = list(chain(*mods))
 
-        msg = "成功加载模型: {}\n".format(mod_ph)
+    for idx, mod_ph in enumerate(mods):
+        msg = mod_ph
+        try:
+            mod = SourceFileLoader("dynamic_imp_mod.{}".format(idx), mod_ph).load_module()
 
-    except (Exception,) as e:
-        msg = "加载模型时，出现错误。\n模型路径: {}\n" \
-              "错误信息: {}\n".format(mod_ph, e)
-    finally:
-        print(msg)
-        del msg
+            for o in dir(mod):
+                _obj = type(getattr(mod, o))
+                if issubclass(_obj, OrmBase) and hasattr(_obj, "__tablename__"):
+                    mods_map[idx] = _obj
+
+            msg = "成功加载模型: {}\n".format(mod_ph)
+
+        except (Exception,) as e:
+            msg = "加载模型时，出现错误。\n模型路径: {}\n" \
+                  "错误信息: {}\n".format(mod_ph, e)
+        finally:
+            print(msg)
+            del msg
+
+
+search_model()
+
+
 # [end] celorm patch
 """
 
@@ -132,8 +141,8 @@ def patch_env():
 
     alembic_cfg = Config("alembic.ini")
 
-    env_path = alembic_cfg.get_main_option("script_location")
-    env_path = osph.join(env_path, "env.py")
+    main_dir = alembic_cfg.get_main_option("script_location")
+    env_path = osph.join(main_dir, "env.py")
     with open(env_path, "r") as rf:
         _origin_f = rf.read()
 

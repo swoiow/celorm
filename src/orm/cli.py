@@ -9,79 +9,54 @@ http://alembic.zzzcomputing.com/en/latest/api/config.html#alembic.config.Config
 
 from __future__ import absolute_import
 
-import os.path as osph
-import pdb
 import pickle
 import sys
 import time
+from os import path
 
+from colorama import Fore, init
+
+
+init(autoreset=True)
 
 cPickle = pickle
 
-sys.path.insert(0, osph.join(osph.abspath(osph.dirname(__file__)), osph.pardir))
+sys.path.insert(0, path.join(path.abspath(path.dirname(__file__)), path.pardir))
 
-_migration_path = osph.join(osph.curdir, ".alembic")
-_base_path = osph.abspath(osph.dirname(__file__))
+_migration_path = path.join(path.curdir, ".alembic")
+_package_dir = path.abspath(path.dirname(__file__))
+
+sp_search_models = "search_models.ptpl"
 
 _origin_line = """# from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 target_metadata = None"""
 
 _new_line = r"""
-# [start] celorm patch
-
+# [start] celorm patch. Don't remove this line.
+from os import path
 from celorm.utils import OrmBase
+from importlib.machinery import SourceFileLoader
 
 target_metadata = OrmBase.metadata
 mods_map = {}
 
+main_dir = config.get_main_option("script_location")
+sp_path = path.join(main_dir, "search_models.py")
+script = SourceFileLoader("search_models", sp_path).load_module()
 
-def search_model():
-    import glob
-    from itertools import chain
-    from importlib.machinery import SourceFileLoader
-    from os.path import (join, realpath)
-
-    search_rules = [
-        join(realpath("."), "*", "model.py"),
-        join(realpath("."), "*", "models.py"),
-    ]
-    print("当前搜索规则是: {}\n".format(search_rules))
-    mods = [glob.glob(ph) for ph in search_rules]
-    mods = list(chain(*mods))
-
-    for idx, mod_ph in enumerate(mods):
-        msg = mod_ph
-        try:
-            mod = SourceFileLoader("dynamic_imp_mod.{}".format(idx), mod_ph).load_module()
-
-            for o in dir(mod):
-                _obj = type(getattr(mod, o))
-                if issubclass(_obj, OrmBase) and hasattr(_obj, "__tablename__"):
-                    mods_map[idx] = _obj
-
-            msg = "成功加载模型: {}\n".format(mod_ph)
-
-        except (Exception,) as e:
-            msg = "加载模型时，出现错误。\n模型路径: {}\n" \
-                  "错误信息: {}\n".format(mod_ph, e)
-        finally:
-            print(msg)
-            del msg
-
-
-search_model()
-
-
-# [end] celorm patch
+# [end] celorm patch. Don't remove this line.
 """
 
 
 class CLI(object):
+    """ A database manager tools just like django-orm. """
+
     @staticmethod
     def init_db():
-        if osph.exists(_migration_path):
-            return _migration_path + " has existed!"
+        if path.exists(_migration_path):
+            print(Fore.YELLOW + _migration_path + " has existed!")
+            return
 
         else:
             from alembic import command
@@ -90,32 +65,35 @@ class CLI(object):
             alembic_cfg = Config(
                 file_="alembic.ini",
             )
-            command.init(alembic_cfg, _migration_path, template='generic')
+
+            command.init(alembic_cfg, _migration_path, template="generic")
 
             # 修改 env.py 文件
             patch_env()
 
-            print("请修改 alembic.ini 中 sqlalchemy.url 的值. ")
+            print("\n" + Fore.YELLOW + "请修改 alembic.ini 中 sqlalchemy.url 的值. \n")
 
     @staticmethod
     def makemigrations():
-        if osph.exists(_migration_path):
+        if path.exists(_migration_path):
             from alembic import command
             from alembic.config import Config
 
             alembic_cfg = Config("alembic.ini")
-            output = command.revision(
+            command.revision(
                 alembic_cfg,
                 message=str(int(time.time())),
                 autogenerate=True,
             )
 
         else:
-            return _migration_path + " not existed!"
+            print(Fore.YELLOW + _migration_path + " not existed!")
+
+            return
 
     @staticmethod
     def migrate(revision="head"):
-        if osph.exists(_migration_path):
+        if path.exists(_migration_path):
             from alembic.config import Config
             from alembic import command
 
@@ -126,7 +104,9 @@ class CLI(object):
             return output
 
         else:
-            return _migration_path + " not existed!"
+            print(Fore.YELLOW + _migration_path + " not existed!")
+
+            return
 
     # def auto_migrate(self):
     #     self.makemigrations()
@@ -138,11 +118,12 @@ class CLI(object):
 
 def patch_env():
     from alembic.config import Config
+    from alembic.script.base import ScriptDirectory
 
     alembic_cfg = Config("alembic.ini")
 
     main_dir = alembic_cfg.get_main_option("script_location")
-    env_path = osph.join(main_dir, "env.py")
+    env_path = path.join(main_dir, "env.py")
     with open(env_path, "r") as rf:
         _origin_f = rf.read()
 
@@ -150,14 +131,49 @@ def patch_env():
         _new_f = _origin_f.replace(_origin_line, _new_line)
         wf.write(_new_f)
 
+    script = ScriptDirectory(main_dir)
+    script._copy_file(
+        path.join(_package_dir, sp_search_models),
+        path.join(main_dir, "search_models.py")
+    )
+
 
 def dump_check(file):
-    if osph.isfile(file):
+    import pdb
+
+    if path.isfile(file):
         with open(file, "rb") as rf:
             ctx = cPickle.load(rf)
 
-        print("activate python pdb. please check the object(ctx)")
+        print(Fore.BLUE + "activate python pdb. please check the object(ctx)")
         pdb.set_trace()
+
+
+def search_models():
+    """ running search models function in .alembic/env.py """
+
+    from alembic.config import Config
+
+    alembic_cfg = Config("alembic.ini")
+    main_dir = alembic_cfg.get_main_option("script_location")
+
+    if path.exists(main_dir):
+        import importlib.util
+
+        sp_path = path.join(main_dir, "search_models.py")
+
+        spec = importlib.util.spec_from_file_location("search_models", sp_path)
+        script = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(script)
+        # f._search_models()
+        message = "[I] 搜索完成。"
+
+    else:
+        message = "[W] 没找到 .alembic 文件夹。"
+
+    print(Fore.YELLOW + message.strip() + "\n")
+
+    return
 
 
 def main():
@@ -166,14 +182,20 @@ def main():
 
         inst = CLI()
         inst.dmp_chk = dump_check
+        inst.search_models = search_models
 
         fire.Fire(inst)
 
-    except ImportError:
-        import sys
+    except ImportError as e:
+        if e.name in ["fire"]:
+            import sys
 
-        message = "running cli mode failed. \n" \
-                  "missing fire. please install package with extra-cli or extra-full. \n" \
-                  "to get more, check in github https://github.com/swoiow/celorm \n"
+            message = "running cli mode failed. \n" \
+                      "missing fire. please install package with extra-cli or extra-full. \n" \
+                      "to get more, check in github https://github.com/swoiow/celorm \n"
 
-        sys.stderr.write('\x1b[1;31m' + message.strip() + '\x1b[0m' + '\n')
+            print(Fore.RED + message)
+            return
+
+        else:
+            raise ImportError(e)

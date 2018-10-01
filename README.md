@@ -7,10 +7,10 @@ Sqlalchemy + alembic => django-orm
 > `pip install https://github.com/swoiow/celorm/archive/master.zip`
 
 + with fire
-> `pip install git+https://github.com/swoiow/celorm.git#egg=celorm[cli]`
+> `pip install "git+https://github.com/swoiow/celorm.git#egg=celorm[cli]"`
 
 + with fire+alembic
-> `pip install git+https://github.com/swoiow/celorm.git#egg=celorm[full]`
+> `pip install "git+https://github.com/swoiow/celorm.git#egg=celorm[full]"`
 
 default search: model.py & models.py 
 ```

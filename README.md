@@ -18,13 +18,14 @@ default search: model.py & models.py
 
 Type:        CLI
 String form: <CLI @0x1f0ef118368>
-File:        ...
+Docstring:   A database manage tools just like django-orm.
 
 Usage:       celorm
              celorm dmp-chk
              celorm init-db
              celorm makemigrations
              celorm migrate
+             celorm search-models
 ```
 
 

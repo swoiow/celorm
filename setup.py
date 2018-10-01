@@ -5,7 +5,7 @@ import setuptools
 
 
 NAME = "celorm"
-VERSION = "0.0.6"
+VERSION = "0.0.7"
 URL = "https://github.com/swoiow/celorm"
 
 EXTRAS_CLI = [
@@ -17,6 +17,7 @@ EXTRAS_FULL = EXTRAS_CLI + [
 ]
 
 DEPENDENCIES = [
+    "colorama",
     "sqlalchemy",
 ]
 
@@ -31,7 +32,7 @@ setuptools.setup(
     package_dir={
         NAME: "src/orm",
     },
-
+    include_package_data=True,
     entry_points={
         "console_scripts": ["celorm=celorm.cli:main"],
     },

@@ -18,7 +18,7 @@ default search: model.py & models.py
 
 Type:        CLI
 String form: <CLI @0x1f0ef118368>
-Docstring:   A database manage tools just like django-orm.
+Docstring:   A database manager tools just like django-orm.
 
 Usage:       celorm
              celorm dmp-chk
@@ -41,15 +41,17 @@ http://docs.sqlalchemy.org/en/latest/orm/extensions/declarative/mixins.html
 from myorm.utils import OrmBase
 
 record_table_mapper = {}
-class PotentialModel(OrmBase):
-    __tablename__ = "test-table"
+
+# TODO: 如果类继承于 OrmBase， 则出现 sqlalchemy.exc.NoForeignKeysError 的问题
+class PotentialModel(object):  # notice: the class is inherits from object
+    __tablename__ = "base_table"
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
     name = sa.Column(sa.String(1000))
 
 table = dynamic_table("PotentialModel", PotentialModel, "PotentialModel")
 record_table_mapper["dyt_A"] = table
 
-engine = sa.create_engine("sqlite:///database.db")
+engine = sa.create_engine("sqlite://")
 session = Session(bind=engine)
 
 OrmBase.metadata.create_all(engine)

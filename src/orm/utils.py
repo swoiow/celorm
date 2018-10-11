@@ -109,6 +109,8 @@ def dynamic_table(cls_name, model, table_name=None):
         http://docs.sqlalchemy.org/en/latest/orm/extensions/declarative/mixins.html
 
     record_table_mapper = {}
+    
+    # TODO: 如果类继承于 OrmBase， 则出现 sqlalchemy.exc.NoForeignKeysError 的问题
     class PotentialModel(object):
         __tablename__ = "test-table"
         id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
@@ -117,7 +119,7 @@ def dynamic_table(cls_name, model, table_name=None):
     a = dynamic_table("PotentialModel", PotentialModel, "PotentialModel")
     record_table_mapper["dyt_A"] = a
 
-    engine = sa.create_engine("sqlite:///database.db")
+    engine = sa.create_engine("sqlite://")
     session = Session(bind=engine)
 
     OrmBase.metadata.create_all(engine)
@@ -133,12 +135,14 @@ def dynamic_table(cls_name, model, table_name=None):
         print(q.all())
     """
 
-    dict_ = table_name and {"__tablename__": table_name} or dict()
+    attrs = {}
+    if table_name:
+        attrs["__tablename__"] = table_name
 
     table_object = type(
         "DYT_{class_name}".format(class_name=cls_name),
         (model, OrmBase),
-        dict_
+        attrs
     )
 
     return table_object

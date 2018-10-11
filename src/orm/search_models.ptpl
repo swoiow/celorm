@@ -8,6 +8,8 @@ from celorm.utils import OrmBase
 
 # add search_path in search_rules.
 search_rules = [
+    join(realpath("."), "model.py"),
+    join(realpath("."), "models.py"),
     join(realpath("."), "*", "model.py"),
     join(realpath("."), "*", "models.py"),
 ]

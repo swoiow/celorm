@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from os.path import (join, realpath)
+import sys
+from os.path import (join, realpath, curdir, pardir, abspath)
 
 from celorm.utils import OrmBase
 
+
+for ix, env_root in enumerate([curdir, pardir]):
+    sys.path.insert(ix, abspath(env_root))
 
 # add search_path in search_rules.
 search_rules = [
@@ -18,7 +22,7 @@ search_rules = [
 def _search_model():
     import glob
     from itertools import chain
-    from importlib.machinery import SourceFileLoader
+    import importlib.util
 
     mods_map = {}
 
@@ -28,8 +32,13 @@ def _search_model():
 
     for idx, mod_ph in enumerate(mods):
         msg = mod_ph
+
         try:
-            mod = SourceFileLoader("dynamic_imp_mod.{}".format(idx), mod_ph).load_module()
+            spec = importlib.util.spec_from_file_location(
+                "dynamic_imp_mod.{}".format(idx), mod_ph
+            )
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
 
             for o in dir(mod):
                 _obj = type(getattr(mod, o))
@@ -42,6 +51,7 @@ def _search_model():
             msg = "\x1b[1;31m" \
                   "[E] 加载模型时，出现错误。\n模型路径: {}\n" \
                   "错误信息: {} \x1b[0m \n".format(mod_ph, e)
+
         finally:
             print(msg.strip() + "\n")
             del msg
@@ -50,3 +60,4 @@ def _search_model():
 
 
 models_map = _search_model()
+

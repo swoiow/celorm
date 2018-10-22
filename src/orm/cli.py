@@ -66,12 +66,14 @@ class CLI(object):
                 file_="alembic.ini",
             )
 
-            command.init(alembic_cfg, _migration_path, template="generic")
+            command.init(alembic_cfg, _set_unix_path(_migration_path), template="generic")
 
             # 修改 env.py 文件
             patch_env()
 
-            print("\n" + Fore.YELLOW + "请修改 alembic.ini 中 sqlalchemy.url 的值. \n")
+            print("\n" + Fore.YELLOW +
+                  "请修改 alembic.ini 中 sqlalchemy.url 的值. \n"
+                  "请修改 .alembic/search_models.py 中 search_rules 的路径. \n")
 
     @staticmethod
     def makemigrations():
@@ -123,6 +125,8 @@ def patch_env():
     alembic_cfg = Config("alembic.ini")
 
     main_dir = alembic_cfg.get_main_option("script_location")
+    main_dir = _set_unix_path(main_dir)
+
     env_path = path.join(main_dir, "env.py")
     with open(env_path, "r") as rf:
         _origin_f = rf.read()
@@ -156,6 +160,7 @@ def search_models():
 
     alembic_cfg = Config("alembic.ini")
     main_dir = alembic_cfg.get_main_option("script_location")
+    main_dir = _set_unix_path(main_dir)
 
     if path.exists(main_dir):
         import importlib.util
@@ -174,6 +179,14 @@ def search_models():
     print(Fore.YELLOW + message.strip() + "\n")
 
     return
+
+
+def _set_unix_path(dir_):
+    """ format alembic path in unix path. """
+    nt_slash = "\\"
+    unix_slash = "/"
+
+    return dir_.replace(nt_slash, unix_slash)
 
 
 def main():

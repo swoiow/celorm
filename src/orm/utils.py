@@ -40,6 +40,8 @@ def db_write(engine=None):
         session.commit()
 
     except Exception as e:
+        traceback.print_exc()
+
         session.rollback()
         catch_exception(type_="w")
 
@@ -56,6 +58,8 @@ def db_read(engine=None):
         yield session
 
     except Exception as e:
+        traceback.print_exc()
+
         catch_exception(type_="r")
 
     finally:
@@ -76,20 +80,30 @@ def catch_exception(type_):
         print("[{0}] Error and export dump in => {1}".format(type_, fp))
 
 
+def row2dict(r):
+    # TODO: 可能存在bug, getattr 的默认值为 None。
+    #  当 column 不存在的时候，会出现 None，产生错觉.
+
+    if hasattr(r, "__table__"):
+        return {c.name: getattr(r, c.name) for c in r.__table__.columns}
+    else:
+        return {c: getattr(r, c) for c in r._fields}
+
+
+def to_dict_with_qy(query_cls):
+    query_columns = [c["name"] for c in query_cls.column_descriptions]
+
+    return (dict(zip(query_columns, i)) for i in query_cls)
+
+
 class MyORMBase(object):
     # query = Session.query_property()
 
-    @staticmethod
-    def row2dict(r):
-        # TODO: getattr 可能存在bug, 没有读取字段为空时的默认值.
-
-        if hasattr(r, "__table__"):
-            return {c.name: getattr(r, c.name) for c in r.__table__.columns}
-        else:
-            return {c: getattr(r, c) for c in r._fields}
+    row2dict = row2dict
+    to_dict_with_q = to_dict_with_qy
 
     def to_dict(self):
-        return self.row2dict(self)
+        return row2dict(self)
 
     def _init_more(self, **kwargs):
         for obj in (f for f in self.__class__.__dict__.keys() if not f.startswith("_")):
@@ -101,6 +115,8 @@ class MyORMBase(object):
 
 
 OrmBase = declarative_base(cls=MyORMBase)
+Model = OrmBase
+MyModel = MyORMBase
 
 
 def dynamic_table(cls_name, model, table_name=None):
@@ -109,7 +125,7 @@ def dynamic_table(cls_name, model, table_name=None):
         http://docs.sqlalchemy.org/en/latest/orm/extensions/declarative/mixins.html
 
     record_table_mapper = {}
-    
+
     # TODO: 如果类继承于 OrmBase， 则出现 sqlalchemy.exc.NoForeignKeysError 的问题
     class PotentialModel(object):
         __tablename__ = "test-table"

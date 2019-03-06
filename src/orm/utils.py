@@ -12,9 +12,12 @@ import os
 import sys
 import traceback
 from contextlib import contextmanager
+from functools import partial
 
+import sqlalchemy as sa
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.session import Session
+from sqlalchemy.pool import StaticPool
 
 
 try:
@@ -24,16 +27,24 @@ except ImportError:
 
 __all_ = ["db_write", "db_read", "dynamic_table", "OrmBase", ]
 
+create_engine = partial(
+    sa.create_engine,
+    convert_unicode=True,
+    pool_recycle=3600,
+    echo=False,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
+
+
+# scoped_sess = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
+
 
 @contextmanager
-def db_write(engine=None):
+def db_write(engine: sa.engine.Engine):
     """ Provide a transactional scope around a series of operations. """
 
-    engine = engine or os.environ.get("DATABASE_URI")
     session = Session(bind=engine)
-    # Session = scoped_session(
-    #     sessionmaker(bind=engine, autocommit=False, autoflush=False)
-    # )
 
     try:
         yield session
@@ -50,8 +61,7 @@ def db_write(engine=None):
 
 
 @contextmanager
-def db_read(engine=None):
-    engine = engine or os.environ.get("DATABASE_URI")
+def db_read(engine: sa.engine.Engine):
     session = Session(bind=engine)
 
     try:

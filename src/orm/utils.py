@@ -16,7 +16,8 @@ from functools import partial
 
 import sqlalchemy as sa
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm.session import Session
+from sqlalchemy.orm.scoping import scoped_session
+from sqlalchemy.orm.session import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 
@@ -25,26 +26,25 @@ try:
 except ImportError:
     import cPickle as pickle
 
-__all_ = ["db_write", "db_read", "dynamic_table", "OrmBase", ]
+__all_ = ["dynamic_table", "OrmBase", "Model", "MyModel"]
 
 create_engine = partial(
     sa.create_engine,
-    convert_unicode=True,
+    # convert_unicode=True,
     pool_recycle=3600,
     echo=False,
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
 )
 
-
-# scoped_sess = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
+SESSION = scoped_session(sessionmaker(autocommit=False, autoflush=False))
 
 
 @contextmanager
-def db_write(engine: sa.engine.Engine):
+def db_write(*args, **kwargs):
     """ Provide a transactional scope around a series of operations. """
 
-    session = Session(bind=engine)
+    session = SESSION()
 
     try:
         yield session
@@ -61,8 +61,8 @@ def db_write(engine: sa.engine.Engine):
 
 
 @contextmanager
-def db_read(engine: sa.engine.Engine):
-    session = Session(bind=engine)
+def db_read(*args, **kwargs):
+    session = SESSION()
 
     try:
         yield session
@@ -90,30 +90,29 @@ def catch_exception(type_):
         print("[{0}] Error and export dump in => {1}".format(type_, fp))
 
 
-def row2dict(r):
-    # TODO: 可能存在bug, getattr 的默认值为 None。
-    #  当 column 不存在的时候，会出现 None，产生错觉.
+class DictMixin(object):
 
-    if hasattr(r, "__table__"):
-        return {c.name: getattr(r, c.name) for c in r.__table__.columns}
-    else:
-        return {c: getattr(r, c) for c in r._fields}
+    @staticmethod
+    def row2dict(r):
+        # TODO: 可能存在bug, getattr 的默认值为 None。
+        #  当 column 不存在的时候，会出现 None，产生错觉.
 
+        if hasattr(r, "__table__"):
+            return {c.name: getattr(r, c.name) for c in r.__table__.columns}
+        else:
+            return {c: getattr(r, c) for c in r._fields}
 
-def to_dict_with_qy(query_cls):
-    query_columns = [c["name"] for c in query_cls.column_descriptions]
+    @staticmethod
+    def to_dict_with_qy(query_cls):
+        query_columns = [c["name"] for c in query_cls.column_descriptions]
 
-    return (dict(zip(query_columns, i)) for i in query_cls)
-
-
-class MyORMBase(object):
-    # query = Session.query_property()
-
-    row2dict = row2dict
-    to_dict_with_q = to_dict_with_qy
+        return (dict(zip(query_columns, i)) for i in query_cls)
 
     def to_dict(self):
-        return row2dict(self)
+        return self.row2dict(self)
+
+
+class MyORMBase(DictMixin):
 
     def _init_more(self, **kwargs):
         for obj in (f for f in self.__class__.__dict__.keys() if not f.startswith("_")):

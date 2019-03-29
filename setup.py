@@ -5,7 +5,7 @@ import setuptools
 
 
 NAME = "celorm"
-VERSION = "0.0.7"
+VERSION = "0.0.8"
 URL = "https://github.com/swoiow/celorm"
 
 EXTRAS_CLI = [
